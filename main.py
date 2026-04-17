@@ -38,7 +38,6 @@ class AplicacionCotizacion:
         self.menu_impresion = None
         self.logo_principal = None
         self.imagen_extintor = None
-        self.logo_pie = None
 
         self._construir_interfaz()
         self.agregar_fila()
@@ -120,13 +119,14 @@ class AplicacionCotizacion:
             bd=1,
             relief="solid",
             width=330,
-            height=360,
+            height=390,
         )
         panel_marca.pack(fill="both", expand=True)
         panel_marca.pack_propagate(False)
 
         ruta_logo = Path(__file__).parent / "assets" / "logogermania.png"
         if ruta_logo.exists():
+            # El logo se reduce para dejar espacio suficiente al extintor dentro del mismo panel.
             self.logo_principal = tk.PhotoImage(file=str(ruta_logo)).subsample(2, 2)
             tk.Label(panel_marca, image=self.logo_principal, bg="#ffffff").pack(pady=(28, 14))
         else:
@@ -140,9 +140,9 @@ class AplicacionCotizacion:
 
         ruta_extintor = Path(__file__).parent / "assets" / "PQS10KGDEFINITIVO.png"
         if ruta_extintor.exists():
-            # Esta imagen se guarda dentro de assets para que funcione igual en cualquier PC.
-            self.imagen_extintor = tk.PhotoImage(file=str(ruta_extintor)).subsample(2, 2)
-            tk.Label(panel_marca, image=self.imagen_extintor, bg="#ffffff").pack(pady=(0, 20))
+            # Se usa una escala mayor en el extintor para que se vea completo y proporcionado.
+            self.imagen_extintor = tk.PhotoImage(file=str(ruta_extintor)).subsample(3, 3)
+            tk.Label(panel_marca, image=self.imagen_extintor, bg="#ffffff").pack(pady=(0, 16))
         else:
             tk.Label(
                 panel_marca,
@@ -307,10 +307,7 @@ class AplicacionCotizacion:
             bg="#efefef",
         ).pack(anchor="w", pady=(8, 12))
 
-        ruta_logo = Path(__file__).parent / "assets" / "logogermania.png"
-        if ruta_logo.exists():
-            self.logo_pie = tk.PhotoImage(file=str(ruta_logo))
-            tk.Label(marco_izquierdo, image=self.logo_pie, bg="#efefef").pack(anchor="w")
+        # El logo del pie se elimina para evitar que aparezca duplicado en la cotización.
 
         marco_derecho = tk.Frame(marco_pie, bg="#efefef")
         marco_derecho.grid(row=0, column=1, sticky="ne")
