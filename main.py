@@ -2,11 +2,11 @@ import tkinter as tk
 from tkinter import ttk
 from pathlib import Path
 from tkinter import messagebox
-from tkinter import simpledialog
 import os
 import subprocess
 import sys
 import tempfile
+
 
 class AplicacionCotizacion:
     def __init__(self, raiz: tk.Tk):
@@ -27,6 +27,9 @@ class AplicacionCotizacion:
         self.var_cargo_ejecutivo = tk.StringVar(value="Ejecutiva de Ventas")
         self.var_senores = tk.StringVar(value="Comunidad Rivas Vicuña 1214, Quinta Normal")
         self.var_atencion = tk.StringVar(value="Sr. Roberto Armijo")
+        self.var_copias_impresion = tk.IntVar(value=1)
+        self.var_orientacion_impresion = tk.StringVar(value="Vertical")
+        self.menu_impresion = None
         self._construir_interfaz()
         self.agregar_fila()
         self._aplicar_estado_edicion()
@@ -147,7 +150,7 @@ class AplicacionCotizacion:
         )
         self.boton_editar.pack(side="right")
         self.boton_imprimir = ttk.Button(
-            marco_botones_tabla, text="Imprimir", command=self.imprimir_cotizacion
+            marco_botones_tabla, text="Imprimir", command=self.abrir_menu_impresion
         )
         self.boton_imprimir.pack(side="right", padx=(0, 8))
 
@@ -365,26 +368,183 @@ class AplicacionCotizacion:
 
         self._renderizar_tabla()
 
-    def imprimir_cotizacion(self):
-        copias = simpledialog.askinteger(
-            "Imprimir",
-            "¿Cuántas copias desea imprimir?",
-            parent=self.raiz,
-            minvalue=1,
-            initialvalue=1,
+    def abrir_menu_impresion(self):
+        if self.menu_impresion and self.menu_impresion.winfo_exists():
+            self.menu_impresion.lift()
+            self.menu_impresion.focus_force()
+            return
+
+        self.menu_impresion = tk.Toplevel(self.raiz)
+        self.menu_impresion.title("Imprimir")
+        self.menu_impresion.configure(bg="#ececec")
+        self.menu_impresion.geometry("1040x640")
+        self.menu_impresion.minsize(960, 580)
+        self.menu_impresion.transient(self.raiz)
+        self.menu_impresion.grab_set()
+
+        marco_lateral = tk.Frame(self.menu_impresion, bg="#ececec", width=320, padx=18, pady=16)
+        marco_lateral.pack(side="left", fill="y")
+        marco_lateral.pack_propagate(False)
+
+        tk.Label(
+            marco_lateral,
+            text="Imprimir",
+            font=("Arial", 20, "bold"),
+            bg="#ececec",
+            anchor="w",
+        ).pack(fill="x", pady=(0, 14))
+
+        boton_imprimir_menu = ttk.Button(
+            marco_lateral,
+            text="Imprimir",
+            command=self._imprimir_desde_menu,
         )
-        if copias is None:
+        boton_imprimir_menu.pack(fill="x", ipady=8, pady=(0, 14))
+
+        tk.Label(
+            marco_lateral,
+            text="Copias:",
+            font=("Arial", 10, "bold"),
+            bg="#ececec",
+            anchor="w",
+        ).pack(fill="x")
+        control_copias = tk.Spinbox(
+            marco_lateral,
+            from_=1,
+            to=999,
+            textvariable=self.var_copias_impresion,
+            font=("Arial", 10),
+            width=8,
+        )
+        control_copias.pack(anchor="w", pady=(4, 10))
+
+        tk.Label(
+            marco_lateral,
+            text="Orientación:",
+            font=("Arial", 10, "bold"),
+            bg="#ececec",
+            anchor="w",
+        ).pack(fill="x")
+        combo_orientacion = ttk.Combobox(
+            marco_lateral,
+            textvariable=self.var_orientacion_impresion,
+            values=["Vertical", "Horizontal"],
+            state="readonly",
+        )
+        combo_orientacion.pack(fill="x", pady=(4, 14))
+        combo_orientacion.bind("<<ComboboxSelected>>", lambda _: self._actualizar_vista_previa_impresion())
+
+        tk.Label(
+            marco_lateral,
+            text="Vista previa",
+            font=("Arial", 10, "bold"),
+            bg="#ececec",
+            anchor="w",
+        ).pack(fill="x", pady=(2, 6))
+
+        tk.Label(
+            marco_lateral,
+            text=(
+                "Este panel replica un flujo de impresión tipo Office: "
+                "configuras y luego envías con el botón Imprimir."
+            ),
+            justify="left",
+            wraplength=280,
+            bg="#ececec",
+            fg="#3f3f3f",
+            font=("Arial", 9),
+        ).pack(fill="x")
+
+        marco_vista = tk.Frame(self.menu_impresion, bg="#dcdcdc", padx=18, pady=16)
+        marco_vista.pack(side="left", fill="both", expand=True)
+
+        self.texto_vista_previa = tk.Text(
+            marco_vista,
+            font=("Times New Roman", 12),
+            bg="white",
+            relief="solid",
+            bd=1,
+            wrap="word",
+            padx=24,
+            pady=18,
+        )
+        self.texto_vista_previa.pack(fill="both", expand=True)
+        self.texto_vista_previa.configure(state="disabled")
+
+        self._actualizar_vista_previa_impresion()
+
+    def _obtener_texto_vista_previa(self) -> str:
+        lineas = [
+            "COTIZACIÓN",
+            "",
+            f"Señores: {self.var_senores.get()}",
+            f"Atención: {self.var_atencion.get()}",
+            "",
+            "DETALLE",
+            "-" * 82,
+        ]
+
+        encabezado = " | ".join(self.columnas)
+        lineas.append(encabezado)
+        lineas.append("-" * 82)
+
+        for fila in self.filas:
+            valores = [celda.get().strip() for celda in fila]
+            lineas.append(" | ".join(valores))
+
+        lineas.extend(
+            [
+                "-" * 82,
+                f"Neto: {self.var_neto.get()}",
+                f"IVA: {self.var_iva.get()}",
+                f"Total: {self.var_total.get()}",
+                "",
+                f"Ejecutivo: {self.var_nombre_ejecutivo.get()}",
+                f"Cargo: {self.var_cargo_ejecutivo.get()}",
+            ]
+        )
+        return "\n".join(lineas)
+
+    def _actualizar_vista_previa_impresion(self):
+        if not hasattr(self, "texto_vista_previa"):
+            return
+
+        orientacion = self.var_orientacion_impresion.get().strip().lower()
+        ancho = 130 if orientacion == "horizontal" else 95
+
+        contenido = self._obtener_texto_vista_previa()
+        contenido = "\n".join(
+            linea if len(linea) <= ancho else f"{linea[:ancho]}..."
+            for linea in contenido.splitlines()
+        )
+
+        self.texto_vista_previa.configure(state="normal")
+        self.texto_vista_previa.delete("1.0", tk.END)
+        self.texto_vista_previa.insert(
+            "1.0",
+            f"Orientación: {self.var_orientacion_impresion.get()}\n\n{contenido}",
+        )
+        self.texto_vista_previa.configure(state="disabled")
+
+    def _imprimir_desde_menu(self):
+        try:
+            copias = max(1, int(self.var_copias_impresion.get()))
+        except (TypeError, ValueError):
+            messagebox.showerror("Impresión", "Ingrese una cantidad de copias válida.")
             return
 
         try:
             ruta_temporal = self._generar_archivo_impresion()
             self._enviar_a_impresora(ruta_temporal, copias)
+            if self.menu_impresion and self.menu_impresion.winfo_exists():
+                self.menu_impresion.destroy()
             messagebox.showinfo("Impresión", "Se envió el documento a impresión.")
         except Exception as error:
             messagebox.showerror("Error de impresión", f"No se pudo imprimir: {error}")
 
     def _generar_archivo_impresion(self) -> str:
         # Se crea un archivo temporal PostScript con el contenido visible de la ventana.
+        # El comando de impresión toma este archivo como fuente para mantener el diseño actual.
         archivo = tempfile.NamedTemporaryFile(delete=False, suffix=".ps")
         archivo.close()
         self.raiz.update_idletasks()
@@ -408,7 +568,6 @@ class AplicacionCotizacion:
         if proceso.returncode != 0:
             mensaje_error = proceso.stderr.strip() or "No fue posible invocar el comando de impresión."
             raise RuntimeError(mensaje_error)
-
 
     def _actualizar_calculos_automaticos(self, *_):
         total_neto = 0
