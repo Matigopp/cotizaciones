@@ -315,12 +315,6 @@ class AplicacionCotizacion:
         self.boton_eliminar_fila = ttk.Button(marco_botones_tabla, text="Eliminar fila", command=self.eliminar_fila)
         self.boton_eliminar_fila.pack(side="left", padx=(0, 12))
 
-        self.boton_agregar_columna = ttk.Button(marco_botones_tabla, text="Agregar columna", command=self.agregar_columna)
-        self.boton_agregar_columna.pack(side="left", padx=(0, 8))
-
-        self.boton_eliminar_columna = ttk.Button(marco_botones_tabla, text="Eliminar columna", command=self.eliminar_columna)
-        self.boton_eliminar_columna.pack(side="left")
-
         self.boton_guardar = ttk.Button(marco_botones_tabla, text="Guardar", command=self.guardar_cotizacion)
         self.boton_guardar.pack(side="right", padx=(8, 0))
 
@@ -474,14 +468,12 @@ class AplicacionCotizacion:
         nuevas_celdas = []
         for indice_columna, _ in enumerate(self.columnas):
             entrada = tk.Entry(self.marco_tabla, font=("Arial", 15), relief="solid", bd=1)
+            # Se deja cada celda vacía para que al escribir no queden prefijos como 0 o 1.
             if indice_columna == 0:
-                entrada.insert(0, "1")
                 entrada.configure(justify="center")
             elif indice_columna == 2:
-                entrada.insert(0, "0")
                 entrada.configure(justify="right")
             elif indice_columna == len(self.columnas) - 1:
-                entrada.insert(0, "$0")
                 entrada.configure(justify="right")
             else:
                 entrada.configure(justify="left")
@@ -500,36 +492,6 @@ class AplicacionCotizacion:
         fila = self.filas.pop()
         for celda in fila:
             celda.destroy()
-        self._renderizar_tabla()
-        self._actualizar_calculos_automaticos()
-
-    def agregar_columna(self):
-        if self.bloqueado:
-            return
-
-        nombre = f"Columna {len(self.columnas) - 3}" if len(self.columnas) > 3 else "Columna 1"
-        self.columnas.insert(-1, nombre)
-
-        for fila in self.filas:
-            entrada = tk.Entry(self.marco_tabla, font=("Arial", 15), relief="solid", bd=1)
-            entrada.bind("<KeyRelease>", self._actualizar_calculos_automaticos)
-            fila.insert(-1, entrada)
-
-        self._renderizar_tabla()
-
-    def eliminar_columna(self):
-        if self.bloqueado:
-            return
-        if len(self.columnas) <= 4:
-            return
-
-        indice = len(self.columnas) - 2
-        self.columnas.pop(indice)
-
-        for fila in self.filas:
-            celda = fila.pop(indice)
-            celda.destroy()
-
         self._renderizar_tabla()
         self._actualizar_calculos_automaticos()
 
@@ -602,8 +564,6 @@ class AplicacionCotizacion:
         estado_controles = "disabled" if self.bloqueado else "normal"
         self.boton_agregar_fila.configure(state=estado_controles)
         self.boton_eliminar_fila.configure(state=estado_controles)
-        self.boton_agregar_columna.configure(state=estado_controles)
-        self.boton_eliminar_columna.configure(state=estado_controles)
 
         self.boton_guardar.configure(state="disabled" if self.bloqueado else "normal")
         self.boton_editar.configure(state="normal" if self.bloqueado else "disabled")
@@ -981,8 +941,17 @@ class AplicacionCotizacion:
             if len(fila) < 4:
                 continue
 
-            cantidad = self._texto_a_numero(fila[0].get())
-            valor_unitario = self._texto_a_numero(fila[2].get())
+            texto_cantidad = fila[0].get().strip()
+            texto_valor_unitario = fila[2].get().strip()
+
+            if not texto_cantidad or not texto_valor_unitario:
+                fila[-1].configure(state="normal")
+                fila[-1].delete(0, tk.END)
+                fila[-1].configure(state="readonly")
+                continue
+
+            cantidad = self._texto_a_numero(texto_cantidad)
+            valor_unitario = self._texto_a_numero(texto_valor_unitario)
             total_fila = int(cantidad * valor_unitario)
 
             total_neto += total_fila
