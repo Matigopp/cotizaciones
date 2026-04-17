@@ -56,12 +56,14 @@ class AplicacionCotizacion:
                 "fg": "white",
                 "activebackground": "#8f1111",
                 "activeforeground": "white",
+                "disabledbackground": "#d49a9a",
             },
             "secundario": {
-                "bg": "#d9d9d9",
-                "fg": "#111111",
-                "activebackground": "#c8c8c8",
-                "activeforeground": "#111111",
+                "bg": "#2d2d2d",
+                "fg": "white",
+                "activebackground": "#1f1f1f",
+                "activeforeground": "white",
+                "disabledbackground": "#b7b7b7",
             },
         }
 
@@ -84,6 +86,7 @@ class AplicacionCotizacion:
             pady=8,
             cursor="hand2",
             highlightthickness=0,
+            disabledforeground="#f5f5f5",
             **estilo,
         )
 
@@ -346,11 +349,28 @@ class AplicacionCotizacion:
         self._crear_fila_total_resumen(marco_totales, "IVA (19%)", self.var_iva)
         self._crear_fila_total_resumen(marco_totales, "TOTAL", self.var_total, es_total=True)
 
-        marco_botones_tabla = tk.Frame(self.marco_principal, bg="#efefef")
+        # Se usa una barra de acciones dedicada para que los botones mantengan
+        # contraste visual y no se pierdan dentro del contenido de la cotización.
+        marco_botones_tabla = tk.Frame(
+            self.marco_principal,
+            bg="#d7d7d7",
+            padx=10,
+            pady=10,
+            highlightbackground="#b5b5b5",
+            highlightthickness=1,
+        )
         marco_botones_tabla.pack(fill="x", pady=(14, 10))
+        marco_botones_tabla.grid_columnconfigure(0, weight=1)
+        marco_botones_tabla.grid_columnconfigure(1, weight=1)
+
+        marco_botones_izquierda = tk.Frame(marco_botones_tabla, bg="#d7d7d7")
+        marco_botones_izquierda.grid(row=0, column=0, sticky="w")
+
+        marco_botones_derecha = tk.Frame(marco_botones_tabla, bg="#d7d7d7")
+        marco_botones_derecha.grid(row=0, column=1, sticky="e")
 
         self.boton_agregar_fila = self._crear_boton_accion(
-            marco_botones_tabla,
+            marco_botones_izquierda,
             texto="Agregar fila",
             comando=self.agregar_fila,
             variante="principal",
@@ -358,31 +378,31 @@ class AplicacionCotizacion:
         self.boton_agregar_fila.pack(side="left", padx=(0, 8))
 
         self.boton_eliminar_fila = self._crear_boton_accion(
-            marco_botones_tabla,
+            marco_botones_izquierda,
             texto="Eliminar fila",
             comando=self.eliminar_fila,
             variante="secundario",
         )
-        self.boton_eliminar_fila.pack(side="left", padx=(0, 12))
+        self.boton_eliminar_fila.pack(side="left")
 
         self.boton_guardar = self._crear_boton_accion(
-            marco_botones_tabla,
+            marco_botones_derecha,
             texto="Guardar",
             comando=self.guardar_cotizacion,
             variante="principal",
         )
-        self.boton_guardar.pack(side="right", padx=(8, 0))
+        self.boton_guardar.pack(side="right")
 
         self.boton_editar = self._crear_boton_accion(
-            marco_botones_tabla,
+            marco_botones_derecha,
             texto="Editar",
             comando=self.editar_cotizacion,
             variante="secundario",
         )
-        self.boton_editar.pack(side="right")
+        self.boton_editar.pack(side="right", padx=(0, 8))
 
         self.boton_imprimir = self._crear_boton_accion(
-            marco_botones_tabla,
+            marco_botones_derecha,
             texto="Imprimir",
             comando=self.abrir_menu_impresion,
             variante="principal",
@@ -390,7 +410,7 @@ class AplicacionCotizacion:
         self.boton_imprimir.pack(side="right", padx=(0, 8))
 
         self.boton_exportar_pdf = self._crear_boton_accion(
-            marco_botones_tabla,
+            marco_botones_derecha,
             texto="Guardar como archivo",
             comando=self.exportar_reporte_pdf,
             variante="principal",
