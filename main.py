@@ -18,6 +18,7 @@ class AplicacionCotizacion:
         self.filas = []
         self.entradas_encabezado = []
         self.bloqueado = False
+        self.max_columnas_renderizadas = 0
 
         self.var_neto = tk.StringVar(value="$0")
         self.var_iva = tk.StringVar(value="$0")
@@ -113,7 +114,9 @@ class AplicacionCotizacion:
             anchor="w",
         ).pack(fill="x", pady=(0, 8))
 
-        self.marco_tabla = tk.Frame(marco_principal, bg="#2b2b2b", bd=1)
+        # El fondo de la tabla se iguala al fondo principal para que al quitar columnas
+        # no quede una franja oscura y la interfaz mantenga la estética original.
+        self.marco_tabla = tk.Frame(marco_principal, bg="#e6e6e6", bd=1)
         self.marco_tabla.pack(fill="x")
 
         marco_botones_tabla = tk.Frame(marco_principal, bg="#e6e6e6")
@@ -262,7 +265,8 @@ class AplicacionCotizacion:
     def eliminar_fila(self):
         if self.bloqueado:
             return
-        if not self.filas:
+        # La fila base se conserva siempre para que la plantilla no quede vacía.
+        if len(self.filas) <= 1:
             return
         fila = self.filas.pop()
         for celda in fila:
@@ -304,6 +308,11 @@ class AplicacionCotizacion:
         for widget in self.marco_tabla.grid_slaves():
             widget.grid_forget()
 
+        # Se limpia la configuración previa para evitar que columnas antiguas
+        # mantengan pesos o anchos que deformen el diseño al agregar/eliminar.
+        for indice_columna in range(self.max_columnas_renderizadas + 2):
+            self.marco_tabla.grid_columnconfigure(indice_columna, weight=0, minsize=0)
+
         self.entradas_encabezado = []
         for indice_columna, titulo in enumerate(self.columnas):
             encabezado = tk.Entry(
@@ -333,7 +342,18 @@ class AplicacionCotizacion:
                 celda.grid(row=indice_fila, column=indice_columna, sticky="nsew")
 
         for indice_columna in range(len(self.columnas)):
-            self.marco_tabla.grid_columnconfigure(indice_columna, weight=1)
+            ancho_columna = self._obtener_ancho_columna(indice_columna)
+            self.marco_tabla.grid_columnconfigure(indice_columna, weight=0, minsize=ancho_columna)
+
+        # Columna de relleno para ocupar el espacio sobrante sin deformar la tabla.
+        self.marco_tabla.grid_columnconfigure(len(self.columnas), weight=1, minsize=0)
+        self.max_columnas_renderizadas = max(self.max_columnas_renderizadas, len(self.columnas))
+
+    def _obtener_ancho_columna(self, indice_columna: int) -> int:
+        anchos_base = [190, 380, 190, 190]
+        if indice_columna < len(anchos_base):
+            return anchos_base[indice_columna]
+        return 170
 
     def _actualizar_nombre_columna(self, indice_columna: int, evento):
         self.columnas[indice_columna] = evento.widget.get().strip() or self.columnas[indice_columna]
