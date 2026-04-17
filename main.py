@@ -56,14 +56,12 @@ class AplicacionCotizacion:
                 "fg": "white",
                 "activebackground": "#8f1111",
                 "activeforeground": "white",
-                "disabledbackground": "#d49a9a",
             },
             "secundario": {
                 "bg": "#2d2d2d",
                 "fg": "white",
                 "activebackground": "#1f1f1f",
                 "activeforeground": "white",
-                "disabledbackground": "#b7b7b7",
             },
         }
 
