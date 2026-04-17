@@ -13,7 +13,8 @@ class AplicacionCotizacion:
     def __init__(self, raiz: tk.Tk):
         self.raiz = raiz
         self.raiz.title("Cotización")
-        self.raiz.configure(bg="#efefef")
+        self.color_fondo = "#efefef"
+        self.raiz.configure(bg=self.color_fondo)
         self.raiz.geometry("1100x860")
         self.raiz.minsize(980, 760)
 
@@ -46,10 +47,10 @@ class AplicacionCotizacion:
         self._aplicar_estado_edicion()
 
     def _construir_interfaz(self):
-        self.marco_principal = tk.Frame(self.raiz, bg="#efefef", padx=28, pady=18)
+        self.marco_principal = tk.Frame(self.raiz, bg=self.color_fondo, padx=28, pady=18)
         self.marco_principal.pack(fill="both", expand=True)
 
-        self.marco_superior = tk.Frame(self.marco_principal, bg="#efefef")
+        self.marco_superior = tk.Frame(self.marco_principal, bg=self.color_fondo)
         self.marco_superior.pack(fill="x")
         self.marco_superior.grid_columnconfigure(0, weight=3)
         self.marco_superior.grid_columnconfigure(1, weight=1)
@@ -112,12 +113,12 @@ class AplicacionCotizacion:
         ).pack(pady=(8, 0))
 
     def _crear_bloque_logo_derecho(self, padre: tk.Frame):
-        marco_derecho = tk.Frame(padre, bg="#efefef")
+        marco_derecho = tk.Frame(padre, bg=self.color_fondo)
         marco_derecho.grid(row=0, column=1, sticky="nsew")
 
         panel_marca = tk.Frame(
             marco_derecho,
-            bg="#efefef",
+            bg=self.color_fondo,
             width=330,
             height=390,
         )
@@ -134,36 +135,70 @@ class AplicacionCotizacion:
                 math.ceil(imagen_original.height() / 390),
             )
             self.imagen_panel_derecho = imagen_original.subsample(factor_escala, factor_escala)
-            tk.Label(panel_marca, image=self.imagen_panel_derecho, bg="#efefef").pack(expand=True)
+            tk.Label(panel_marca, image=self.imagen_panel_derecho, bg=self.color_fondo).pack(expand=True)
             return
 
         ruta_logo = Path(__file__).parent / "assets" / "logogermania.png"
         if ruta_logo.exists():
             # El logo se reduce para dejar espacio suficiente al extintor dentro del mismo panel.
             self.logo_principal = tk.PhotoImage(file=str(ruta_logo)).subsample(2, 2)
-            tk.Label(panel_marca, image=self.logo_principal, bg="#efefef").pack(pady=(28, 14))
+            tk.Label(panel_marca, image=self.logo_principal, bg=self.color_fondo).pack(pady=(28, 14))
         else:
             tk.Label(
                 panel_marca,
                 text="GERMANIA",
                 font=("Arial", 24, "bold"),
                 fg="#b71818",
-                bg="#efefef",
+                bg=self.color_fondo,
             ).pack(pady=(28, 14))
 
         ruta_extintor = Path(__file__).parent / "assets" / "PQS10KGDEFINITIVO.png"
         if ruta_extintor.exists():
-            # Se usa una escala mayor en el extintor para que se vea completo y proporcionado.
-            self.imagen_extintor = tk.PhotoImage(file=str(ruta_extintor)).subsample(3, 3)
-            tk.Label(panel_marca, image=self.imagen_extintor, bg="#efefef").pack(pady=(0, 16))
+            imagen_original_extintor = tk.PhotoImage(file=str(ruta_extintor))
+            ancho_maximo_panel = 330
+            alto_maximo_panel = 390
+            alto_logo = self.logo_principal.height() if self.logo_principal else 0
+            alto_disponible_extintor = max(1, alto_maximo_panel - alto_logo - 58)
+
+            # Se calcula la escala mínima necesaria para evitar que el extintor se recorte.
+            factor_escala_extintor = max(
+                1,
+                math.ceil(imagen_original_extintor.width() / ancho_maximo_panel),
+                math.ceil(imagen_original_extintor.height() / alto_disponible_extintor),
+            )
+            self.imagen_extintor = imagen_original_extintor.subsample(factor_escala_extintor, factor_escala_extintor)
+            self._igualar_fondo_extintor(self.imagen_extintor)
+            tk.Label(panel_marca, image=self.imagen_extintor, bg=self.color_fondo).pack(pady=(0, 16))
         else:
             tk.Label(
                 panel_marca,
                 text="Imagen extintor no disponible",
                 font=("Arial", 11),
                 fg="#666666",
-                bg="#efefef",
+                bg=self.color_fondo,
             ).pack(pady=(0, 20))
+
+    def _igualar_fondo_extintor(self, imagen: tk.PhotoImage):
+        # Cuando la imagen trae fondo blanco, lo volvemos transparente para que use el color de la app.
+        try:
+            ancho = imagen.width()
+            alto = imagen.height()
+            for x in range(ancho):
+                for y in range(alto):
+                    pixel = imagen.get(x, y)
+                    if isinstance(pixel, tuple):
+                        rojo, verde, azul = pixel[:3]
+                    else:
+                        rojo, verde, azul = self.raiz.winfo_rgb(pixel)
+                        rojo //= 256
+                        verde //= 256
+                        azul //= 256
+
+                    if rojo >= 245 and verde >= 245 and azul >= 245:
+                        imagen.transparency_set(x, y, True)
+        except tk.TclError:
+            # Si la versión de Tk no soporta transparencia por pixel, se conserva la imagen original.
+            return
 
     def _crear_bloque_destinatario(self):
         marco_destinatario = tk.Frame(self.marco_principal, bg="#efefef")
