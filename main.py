@@ -5,6 +5,7 @@ import tempfile
 import tkinter as tk
 import math
 from pathlib import Path
+from tkinter import filedialog
 from tkinter import messagebox
 from tkinter import ttk
 
@@ -329,6 +330,13 @@ class AplicacionCotizacion:
         self.boton_imprimir = ttk.Button(marco_botones_tabla, text="Imprimir", command=self.abrir_menu_impresion)
         self.boton_imprimir.pack(side="right", padx=(0, 8))
 
+        self.boton_exportar_pdf = ttk.Button(
+            marco_botones_tabla,
+            text="Exportar PDF",
+            command=self.exportar_reporte_pdf,
+        )
+        self.boton_exportar_pdf.pack(side="right", padx=(0, 8))
+
     def _actualizar_area_scroll_tabla(self, _evento=None):
         self.canvas_tabla.configure(scrollregion=self.canvas_tabla.bbox("all"))
 
@@ -640,6 +648,13 @@ class AplicacionCotizacion:
         )
         boton_imprimir_menu.pack(fill="x", ipady=8, pady=(0, 14))
 
+        boton_pdf_menu = ttk.Button(
+            marco_lateral,
+            text="Guardar en PDF",
+            command=self.exportar_reporte_pdf,
+        )
+        boton_pdf_menu.pack(fill="x", ipady=8, pady=(0, 14))
+
         tk.Label(
             marco_lateral,
             text="Copias:",
@@ -773,8 +788,8 @@ class AplicacionCotizacion:
             return
 
         try:
-            ruta_temporal = self._generar_archivo_impresion()
-            self._enviar_a_impresora(ruta_temporal, copias)
+            ruta_temporal = self._crear_pdf_temporal()
+            self._imprimir_pdf_directo(ruta_temporal, copias)
             if self.menu_impresion and self.menu_impresion.winfo_exists():
                 self.menu_impresion.destroy()
             messagebox.showinfo("Impresión", "Se envió el documento a impresión.")
@@ -807,6 +822,157 @@ class AplicacionCotizacion:
         if proceso.returncode != 0:
             mensaje_error = proceso.stderr.strip() or "No fue posible invocar el comando de impresión."
             raise RuntimeError(mensaje_error)
+
+    def exportar_reporte_pdf(self):
+        ruta_destino = filedialog.asksaveasfilename(
+            title="Guardar reporte en PDF",
+            defaultextension=".pdf",
+            filetypes=[("Archivo PDF", "*.pdf")],
+            initialfile="cotizacion.pdf",
+        )
+        if not ruta_destino:
+            return
+
+        self._guardar_y_opcionalmente_imprimir_pdf(ruta_destino)
+
+    def _guardar_y_opcionalmente_imprimir_pdf(self, ruta_destino: str):
+        contenido_pdf = self._generar_contenido_pdf()
+        with open(ruta_destino, "wb") as archivo_pdf:
+            archivo_pdf.write(contenido_pdf)
+
+        imprimir = messagebox.askyesno(
+            "PDF generado",
+            "El PDF se guardó correctamente.\n¿Desea enviarlo a imprimir ahora?",
+        )
+        if not imprimir:
+            return
+
+        try:
+            copias = max(1, int(self.var_copias_impresion.get()))
+        except (TypeError, ValueError):
+            copias = 1
+
+        self._imprimir_pdf_directo(ruta_destino, copias)
+
+    def _crear_pdf_temporal(self) -> str:
+        archivo = tempfile.NamedTemporaryFile(delete=False, suffix=".pdf")
+        archivo.close()
+        with open(archivo.name, "wb") as archivo_pdf:
+            archivo_pdf.write(self._generar_contenido_pdf())
+        return archivo.name
+
+    def _imprimir_pdf_directo(self, ruta_archivo: str, copias: int):
+        self._enviar_a_impresora(ruta_archivo, copias)
+
+    def _obtener_lineas_reporte_pdf(self) -> list[str]:
+        lineas = [
+            "COTIZACION",
+            "",
+            f"SEÑORES: {self.var_senores.get()}",
+            f"ATENCION: {self.var_atencion.get()}",
+            "",
+            "DETALLE",
+        ]
+        lineas.append(" | ".join(self.columnas))
+        lineas.append("-" * 120)
+
+        for fila in self.filas:
+            valores = [celda.get().strip() for celda in fila]
+            lineas.append(" | ".join(valores))
+
+        lineas.extend(
+            [
+                "-" * 120,
+                f"NETO: {self.var_neto.get()}",
+                f"IVA: {self.var_iva.get()}",
+                f"TOTAL: {self.var_total.get()}",
+                "",
+                f"EJECUTIVO: {self.var_nombre_ejecutivo.get()}",
+                f"CARGO: {self.var_cargo_ejecutivo.get()}",
+                f"TELEFONO: {self.var_telefono.get()}",
+                f"CORREO: {self.var_correo.get()}",
+            ]
+        )
+        return lineas
+
+    def _escapar_texto_pdf(self, texto: str) -> str:
+        return texto.replace("\\", "\\\\").replace("(", "\\(").replace(")", "\\)")
+
+    def _generar_contenido_pdf(self) -> bytes:
+        # Se genera un PDF mínimo sin dependencias externas para facilitar
+        # la exportación e impresión en cualquier equipo.
+        lineas = self._obtener_lineas_reporte_pdf()
+        lineas_por_pagina = 44
+        bloques_paginas = [
+            lineas[indice:indice + lineas_por_pagina]
+            for indice in range(0, len(lineas), lineas_por_pagina)
+        ] or [[]]
+
+        objetos = []
+        indice_fonte = 1
+        indice_paginas = 2
+        indice_inicial_paginas = 3
+
+        objetos.append("<< /Type /Font /Subtype /Type1 /BaseFont /Helvetica >>".encode("latin-1"))
+
+        indices_pagina = []
+        for numero_pagina, bloque in enumerate(bloques_paginas):
+            indice_pagina = indice_inicial_paginas + numero_pagina * 2
+            indice_stream = indice_pagina + 1
+            indices_pagina.append(indice_pagina)
+
+            contenido_texto = ["BT", "/F1 11 Tf", "50 800 Td", "14 TL"]
+            for linea in bloque:
+                texto_limpio = linea.encode("latin-1", errors="replace").decode("latin-1")
+                contenido_texto.append(f"({self._escapar_texto_pdf(texto_limpio)}) Tj")
+                contenido_texto.append("T*")
+            contenido_texto.append("ET")
+            stream_texto = "\n".join(contenido_texto).encode("latin-1")
+            stream_objeto = (
+                f"<< /Length {len(stream_texto)} >>\nstream\n".encode("latin-1")
+                + stream_texto
+                + b"\nendstream"
+            )
+            objetos.append(
+                (
+                    f"<< /Type /Page /Parent {indice_paginas} 0 R "
+                    f"/MediaBox [0 0 595 842] /Contents {indice_stream} 0 R "
+                    f"/Resources << /Font << /F1 {indice_fonte} 0 R >> >> >>"
+                ).encode("latin-1")
+            )
+            objetos.append(stream_objeto)
+
+        lista_hijos = " ".join(f"{indice} 0 R" for indice in indices_pagina)
+        objetos.insert(
+            1,
+            f"<< /Type /Pages /Kids [{lista_hijos}] /Count {len(indices_pagina)} >>".encode("latin-1"),
+        )
+
+        indice_catalogo = len(objetos) + 1
+        objetos.append(f"<< /Type /Catalog /Pages {indice_paginas} 0 R >>".encode("latin-1"))
+
+        buffer_pdf = bytearray()
+        buffer_pdf.extend(b"%PDF-1.4\n%\xe2\xe3\xcf\xd3\n")
+        offsets = [0]
+        for numero_objeto, contenido in enumerate(objetos, start=1):
+            offsets.append(len(buffer_pdf))
+            buffer_pdf.extend(f"{numero_objeto} 0 obj\n".encode("latin-1"))
+            buffer_pdf.extend(contenido)
+            buffer_pdf.extend(b"\nendobj\n")
+
+        inicio_xref = len(buffer_pdf)
+        buffer_pdf.extend(f"xref\n0 {len(offsets)}\n".encode("latin-1"))
+        buffer_pdf.extend(b"0000000000 65535 f \n")
+        for offset in offsets[1:]:
+            buffer_pdf.extend(f"{offset:010d} 00000 n \n".encode("latin-1"))
+
+        buffer_pdf.extend(
+            (
+                f"trailer\n<< /Size {len(offsets)} /Root {indice_catalogo} 0 R >>\n"
+                f"startxref\n{inicio_xref}\n%%EOF"
+            ).encode("latin-1")
+        )
+        return bytes(buffer_pdf)
 
     def _actualizar_calculos_automaticos(self, *_):
         total_neto = 0
