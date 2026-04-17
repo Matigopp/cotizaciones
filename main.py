@@ -3,6 +3,7 @@ import subprocess
 import sys
 import tempfile
 import tkinter as tk
+import math
 from pathlib import Path
 from tkinter import messagebox
 from tkinter import ttk
@@ -38,6 +39,7 @@ class AplicacionCotizacion:
         self.menu_impresion = None
         self.logo_principal = None
         self.imagen_extintor = None
+        self.imagen_panel_derecho = None
 
         self._construir_interfaz()
         self.agregar_fila()
@@ -115,41 +117,52 @@ class AplicacionCotizacion:
 
         panel_marca = tk.Frame(
             marco_derecho,
-            bg="#ffffff",
-            bd=1,
-            relief="solid",
+            bg="#efefef",
             width=330,
             height=390,
         )
         panel_marca.pack(fill="both", expand=True)
         panel_marca.pack_propagate(False)
 
+        ruta_foto_panel = Path(__file__).parent / "assets" / "foto_panel_germania.png"
+        if ruta_foto_panel.exists():
+            # La imagen se ajusta por factor entero para mantener proporción y evitar deformaciones.
+            imagen_original = tk.PhotoImage(file=str(ruta_foto_panel))
+            factor_escala = max(
+                1,
+                math.ceil(imagen_original.width() / 330),
+                math.ceil(imagen_original.height() / 390),
+            )
+            self.imagen_panel_derecho = imagen_original.subsample(factor_escala, factor_escala)
+            tk.Label(panel_marca, image=self.imagen_panel_derecho, bg="#efefef").pack(expand=True)
+            return
+
         ruta_logo = Path(__file__).parent / "assets" / "logogermania.png"
         if ruta_logo.exists():
             # El logo se reduce para dejar espacio suficiente al extintor dentro del mismo panel.
             self.logo_principal = tk.PhotoImage(file=str(ruta_logo)).subsample(2, 2)
-            tk.Label(panel_marca, image=self.logo_principal, bg="#ffffff").pack(pady=(28, 14))
+            tk.Label(panel_marca, image=self.logo_principal, bg="#efefef").pack(pady=(28, 14))
         else:
             tk.Label(
                 panel_marca,
                 text="GERMANIA",
                 font=("Arial", 24, "bold"),
                 fg="#b71818",
-                bg="#ffffff",
+                bg="#efefef",
             ).pack(pady=(28, 14))
 
         ruta_extintor = Path(__file__).parent / "assets" / "PQS10KGDEFINITIVO.png"
         if ruta_extintor.exists():
             # Se usa una escala mayor en el extintor para que se vea completo y proporcionado.
             self.imagen_extintor = tk.PhotoImage(file=str(ruta_extintor)).subsample(3, 3)
-            tk.Label(panel_marca, image=self.imagen_extintor, bg="#ffffff").pack(pady=(0, 16))
+            tk.Label(panel_marca, image=self.imagen_extintor, bg="#efefef").pack(pady=(0, 16))
         else:
             tk.Label(
                 panel_marca,
                 text="Imagen extintor no disponible",
                 font=("Arial", 11),
                 fg="#666666",
-                bg="#ffffff",
+                bg="#efefef",
             ).pack(pady=(0, 20))
 
     def _crear_bloque_destinatario(self):
