@@ -10,6 +10,8 @@ class AplicacionCotizacion:
 
         self.columnas = ["Cantidad", "Descripción", "Valor Unitario", "Total"]
         self.filas = []
+        self.entradas_encabezado = []
+        self.bloqueado = False
 
         self.var_neto = tk.StringVar(value="$0")
         self.var_iva = tk.StringVar(value="$0")
@@ -20,6 +22,7 @@ class AplicacionCotizacion:
 
         self._construir_interfaz()
         self.agregar_fila()
+        self._aplicar_estado_edicion()
 
     def _construir_interfaz(self):
         marco_principal = tk.Frame(self.raiz, bg="#e6e6e6", padx=18, pady=18)
@@ -90,23 +93,36 @@ class AplicacionCotizacion:
         marco_botones_tabla = tk.Frame(marco_principal, bg="#e6e6e6")
         marco_botones_tabla.pack(fill="x", pady=(8, 10))
 
-        ttk.Button(marco_botones_tabla, text="Agregar fila", command=self.agregar_fila).pack(
-            side="left", padx=(0, 8)
+        self.boton_agregar_fila = ttk.Button(
+            marco_botones_tabla, text="Agregar fila", command=self.agregar_fila
         )
-        ttk.Button(
+        self.boton_agregar_fila.pack(side="left", padx=(0, 8))
+        self.boton_eliminar_fila = ttk.Button(
             marco_botones_tabla, text="Eliminar fila", command=self.eliminar_fila
-        ).pack(side="left", padx=(0, 14))
+        )
+        self.boton_eliminar_fila.pack(side="left", padx=(0, 14))
 
-        ttk.Button(
+        self.boton_agregar_columna = ttk.Button(
             marco_botones_tabla,
             text="Agregar columna",
             command=self.agregar_columna,
-        ).pack(side="left", padx=(0, 8))
-        ttk.Button(
+        )
+        self.boton_agregar_columna.pack(side="left", padx=(0, 8))
+        self.boton_eliminar_columna = ttk.Button(
             marco_botones_tabla,
             text="Eliminar columna",
             command=self.eliminar_columna,
-        ).pack(side="left")
+        )
+        self.boton_eliminar_columna.pack(side="left")
+
+        self.boton_guardar = ttk.Button(
+            marco_botones_tabla, text="Guardar", command=self.guardar_cotizacion
+        )
+        self.boton_guardar.pack(side="right", padx=(8, 0))
+        self.boton_editar = ttk.Button(
+            marco_botones_tabla, text="Editar", command=self.editar_cotizacion
+        )
+        self.boton_editar.pack(side="right")
 
         marco_totales = tk.Frame(marco_principal, bg="#e6e6e6")
         marco_totales.pack(fill="x", pady=(6, 10))
@@ -138,23 +154,25 @@ class AplicacionCotizacion:
             anchor="w",
         ).pack(fill="x")
 
-        tk.Entry(
+        self.entrada_nombre_ejecutivo = tk.Entry(
             marco_principal,
             textvariable=self.var_nombre_ejecutivo,
             font=("Arial", 12, "bold"),
             relief="flat",
             bg="#e6e6e6",
             justify="left",
-        ).pack(fill="x", pady=(8, 2))
+        )
+        self.entrada_nombre_ejecutivo.pack(fill="x", pady=(8, 2))
 
-        tk.Entry(
+        self.entrada_cargo_ejecutivo = tk.Entry(
             marco_principal,
             textvariable=self.var_cargo_ejecutivo,
             font=("Arial", 11),
             relief="flat",
             bg="#e6e6e6",
             justify="left",
-        ).pack(fill="x")
+        )
+        self.entrada_cargo_ejecutivo.pack(fill="x")
 
     def _crear_linea_total(self, padre: tk.Frame, etiqueta: str, variable: tk.StringVar):
         fila = tk.Frame(padre, bg="#e6e6e6")
@@ -167,6 +185,9 @@ class AplicacionCotizacion:
         )
 
     def agregar_fila(self):
+        if self.bloqueado:
+            return
+
         nuevas_celdas = []
         for indice_columna, _ in enumerate(self.columnas):
             entrada = tk.Entry(self.marco_tabla, font=("Arial", 10), relief="solid", bd=1)
@@ -182,6 +203,8 @@ class AplicacionCotizacion:
         self._actualizar_calculos_automaticos()
 
     def eliminar_fila(self):
+        if self.bloqueado:
+            return
         if not self.filas:
             return
         fila = self.filas.pop()
@@ -191,6 +214,8 @@ class AplicacionCotizacion:
         self._actualizar_calculos_automaticos()
 
     def agregar_columna(self):
+        if self.bloqueado:
+            return
         nombre = f"Columna {len(self.columnas) - 3}" if len(self.columnas) > 3 else "Columna 1"
         self.columnas.insert(-1, nombre)
 
@@ -202,6 +227,8 @@ class AplicacionCotizacion:
         self._renderizar_tabla()
 
     def eliminar_columna(self):
+        if self.bloqueado:
+            return
         # Se mantiene un mínimo de las cuatro columnas base para respetar el formato.
         if len(self.columnas) <= 4:
             return
@@ -220,6 +247,7 @@ class AplicacionCotizacion:
         for widget in self.marco_tabla.grid_slaves():
             widget.grid_forget()
 
+        self.entradas_encabezado = []
         for indice_columna, titulo in enumerate(self.columnas):
             encabezado = tk.Entry(
                 self.marco_tabla,
@@ -235,14 +263,16 @@ class AplicacionCotizacion:
                 "<FocusOut>",
                 lambda evento, i=indice_columna: self._actualizar_nombre_columna(i, evento),
             )
+            encabezado.configure(state="readonly" if self.bloqueado else "normal")
             encabezado.grid(row=0, column=indice_columna, sticky="nsew")
+            self.entradas_encabezado.append(encabezado)
 
         for indice_fila, fila in enumerate(self.filas, start=1):
             for indice_columna, celda in enumerate(fila):
                 if indice_columna == len(self.columnas) - 1:
                     celda.configure(state="readonly")
                 else:
-                    celda.configure(state="normal")
+                    celda.configure(state="readonly" if self.bloqueado else "normal")
                 celda.grid(row=indice_fila, column=indice_columna, sticky="nsew")
 
         for indice_columna in range(len(self.columnas)):
@@ -250,6 +280,34 @@ class AplicacionCotizacion:
 
     def _actualizar_nombre_columna(self, indice_columna: int, evento):
         self.columnas[indice_columna] = evento.widget.get().strip() or self.columnas[indice_columna]
+
+    def guardar_cotizacion(self):
+        self.bloqueado = True
+        self._aplicar_estado_edicion()
+
+    def editar_cotizacion(self):
+        self.bloqueado = False
+        self._aplicar_estado_edicion()
+
+    def _aplicar_estado_edicion(self):
+        # Este método centraliza el bloqueo/desbloqueo de toda la interfaz editable.
+        estado_controles = "disabled" if self.bloqueado else "normal"
+        self.boton_agregar_fila.configure(state=estado_controles)
+        self.boton_eliminar_fila.configure(state=estado_controles)
+        self.boton_agregar_columna.configure(state=estado_controles)
+        self.boton_eliminar_columna.configure(state=estado_controles)
+
+        self.boton_guardar.configure(state="disabled" if self.bloqueado else "normal")
+        self.boton_editar.configure(state="normal" if self.bloqueado else "disabled")
+
+        self.entrada_nombre_ejecutivo.configure(
+            state="readonly" if self.bloqueado else "normal"
+        )
+        self.entrada_cargo_ejecutivo.configure(
+            state="readonly" if self.bloqueado else "normal"
+        )
+
+        self._renderizar_tabla()
 
     def _actualizar_calculos_automaticos(self, *_):
         total_neto = 0
