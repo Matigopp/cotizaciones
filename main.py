@@ -1,6 +1,6 @@
 import tkinter as tk
 from tkinter import ttk
-
+from pathlib import Path
 
 class AplicacionCotizacion:
     def __init__(self, raiz: tk.Tk):
@@ -28,13 +28,7 @@ class AplicacionCotizacion:
         marco_principal = tk.Frame(self.raiz, bg="#e6e6e6", padx=18, pady=18)
         marco_principal.pack(fill="both", expand=True)
 
-        tk.Label(
-            marco_principal,
-            text="■ GERMANIA ■",
-            font=("Arial", 22, "bold"),
-            fg="#d11d1d",
-            bg="#e6e6e6",
-        ).pack(pady=(0, 12))
+        self._crear_encabezado_logo(marco_principal)
 
         tk.Label(
             marco_principal,
@@ -173,6 +167,33 @@ class AplicacionCotizacion:
             justify="left",
         )
         self.entrada_cargo_ejecutivo.pack(fill="x")
+
+    def _crear_encabezado_logo(self, padre: tk.Frame):
+        ruta_logo = Path(__file__).parent / "assets" / "logo_germania.png"
+        marco_logo = tk.Frame(padre, bg="#e6e6e6")
+        marco_logo.pack(fill="x", pady=(0, 12))
+
+        if ruta_logo.exists():
+            self.logo_germania = tk.PhotoImage(file=str(ruta_logo))
+            tk.Label(
+                marco_logo,
+                image=self.logo_germania,
+                bg="#ffffff",
+                bd=1,
+                relief="solid",
+                padx=8,
+                pady=6,
+            ).pack(anchor="center")
+            return
+
+        # Si falta el archivo de imagen, se muestra un respaldo legible para no romper el diseño.
+        tk.Label(
+            marco_logo,
+            text="GERMANIA",
+            font=("Arial", 22, "bold"),
+            fg="#d11d1d",
+            bg="#e6e6e6",
+        ).pack(anchor="center")
 
     def _crear_linea_total(self, padre: tk.Frame, etiqueta: str, variable: tk.StringVar):
         fila = tk.Frame(padre, bg="#e6e6e6")
