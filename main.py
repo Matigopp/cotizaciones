@@ -1,20 +1,22 @@
-import tkinter as tk
-from tkinter import ttk
-from pathlib import Path
-from tkinter import messagebox
 import os
 import subprocess
 import sys
 import tempfile
+import tkinter as tk
+from pathlib import Path
+from tkinter import messagebox
+from tkinter import ttk
 
 
 class AplicacionCotizacion:
     def __init__(self, raiz: tk.Tk):
         self.raiz = raiz
         self.raiz.title("Cotización")
-        self.raiz.configure(bg="#e6e6e6")
+        self.raiz.configure(bg="#efefef")
+        self.raiz.geometry("1100x860")
+        self.raiz.minsize(980, 760)
 
-        self.columnas = ["Cantidad", "Descripción", "Valor Unitario", "Total"]
+        self.columnas = ["Cantidad", "Productos", "Valor Unitario", "Total"]
         self.filas = []
         self.entradas_encabezado = []
         self.bloqueado = False
@@ -24,225 +26,321 @@ class AplicacionCotizacion:
         self.var_iva = tk.StringVar(value="$0")
         self.var_total = tk.StringVar(value="$0")
 
-        self.var_nombre_ejecutivo = tk.StringVar(value="Emma Oliveros")
-        self.var_cargo_ejecutivo = tk.StringVar(value="Ejecutiva de Ventas")
-        self.var_senores = tk.StringVar(value="Comunidad Rivas Vicuña 1214, Quinta Normal")
-        self.var_atencion = tk.StringVar(value="Sr. Roberto Armijo")
+        self.var_nombre_ejecutivo = tk.StringVar(value="EMMA OLIVEROS")
+        self.var_cargo_ejecutivo = tk.StringVar(value="Ejecutiva de ventas")
+        self.var_telefono = tk.StringVar(value="9918-63590")
+        self.var_correo = tk.StringVar(value="EMMAOLIVEROS23@GMAIL.COM")
+        self.var_senores = tk.StringVar(value="COMUNIDAD RIVAS VICUÑA 1214 - QTA NORMAL")
+        self.var_atencion = tk.StringVar(value="SR ROBERTO ARMIJO")
         self.var_copias_impresion = tk.IntVar(value=1)
         self.var_orientacion_impresion = tk.StringVar(value="Vertical")
+
         self.menu_impresion = None
+        self.logo_principal = None
+        self.logo_pie = None
+
         self._construir_interfaz()
         self.agregar_fila()
         self._aplicar_estado_edicion()
 
     def _construir_interfaz(self):
-        marco_principal = tk.Frame(self.raiz, bg="#e6e6e6", padx=18, pady=18)
-        marco_principal.pack(fill="both", expand=True)
+        self.marco_principal = tk.Frame(self.raiz, bg="#efefef", padx=28, pady=18)
+        self.marco_principal.pack(fill="both", expand=True)
 
-        self._crear_encabezado_logo(marco_principal)
+        self.marco_superior = tk.Frame(self.marco_principal, bg="#efefef")
+        self.marco_superior.pack(fill="x")
+        self.marco_superior.grid_columnconfigure(0, weight=3)
+        self.marco_superior.grid_columnconfigure(1, weight=1)
+
+        self._crear_bloque_encabezado_izquierdo(self.marco_superior)
+        self._crear_bloque_logo_derecho(self.marco_superior)
+
+        self._crear_bloque_destinatario()
+        self._crear_tabla_y_totales()
+        self._crear_bloque_pie()
+
+    def _crear_bloque_encabezado_izquierdo(self, padre: tk.Frame):
+        marco_izquierdo = tk.Frame(padre, bg="#efefef")
+        marco_izquierdo.grid(row=0, column=0, sticky="nsew", padx=(0, 18))
 
         tk.Label(
-            marco_principal,
-            text="EQUIPOS CONTRA INCENDIO GREIG HERMANOS LTDA",
-            font=("Arial", 11, "bold"),
-            bg="#e6e6e6",
-            anchor="w",
-        ).pack(fill="x")
-        tk.Label(
-            marco_principal,
-            text="Empresa certificada según Decreto 44",
-            font=("Arial", 10),
-            bg="#e6e6e6",
+            marco_izquierdo,
+            text="EQUIPOS CONTRA INCENDIO GREIG HERMANOS LIMITADA",
+            font=("Arial", 17, "bold"),
+            bg="#efefef",
             anchor="w",
         ).pack(fill="x", pady=(0, 10))
 
-        tk.Label(
-            marco_principal,
-            text="Fono: 22 357 8163 – 6212403 | Cel: +56 9 9873 0662",
-            font=("Arial", 10),
-            bg="#e6e6e6",
-            anchor="w",
-        ).pack(fill="x", pady=(0, 10))
+        ttk.Separator(marco_izquierdo, orient="horizontal").pack(fill="x", pady=(0, 12))
 
-        marco_contacto_cliente = tk.Frame(marco_principal, bg="#e6e6e6")
-        marco_contacto_cliente.pack(fill="x", pady=(0, 12))
-
-        tk.Label(
-            marco_contacto_cliente,
-            text="Señores:",
-            font=("Arial", 10),
-            bg="#e6e6e6",
-            anchor="w",
-        ).grid(row=0, column=0, sticky="w")
-
-        self.entrada_senores = tk.Entry(
-            marco_contacto_cliente,
-            textvariable=self.var_senores,
-            font=("Arial", 10),
-            relief="flat",
-            bg="#e6e6e6",
-        )
-        self.entrada_senores.grid(row=0, column=1, sticky="ew", padx=(6, 0))
-        tk.Label(
-            marco_contacto_cliente,
-            text="Atención:",
-            font=("Arial", 10),
-            bg="#e6e6e6",
-            anchor="w",
-        ).grid(row=1, column=0, sticky="w", pady=(4, 0))
-
-        self.entrada_atencion = tk.Entry(
-            marco_contacto_cliente,
-            textvariable=self.var_atencion,
-            font=("Arial", 10),
-            relief="flat",
-            bg="#e6e6e6",
-        )
-        self.entrada_atencion.grid(row=1, column=1, sticky="ew", padx=(6, 0), pady=(4, 0))
-        marco_contacto_cliente.grid_columnconfigure(1, weight=1)
-
-        tk.Label(
-            marco_principal,
-            text=(
-                "Estimados señores, junto con saludar, tenemos el agrado de presentar "
-                "la siguiente cotización de equipos y servicios contra incendio:"
-            ),
-            wraplength=820,
-            justify="left",
-            font=("Arial", 10),
-            bg="#e6e6e6",
-            anchor="w",
-        ).pack(fill="x", pady=(0, 8))
-
-        # El fondo de la tabla se iguala al fondo principal para que al quitar columnas
-        # no quede una franja oscura y la interfaz mantenga la estética original.
-        self.marco_tabla = tk.Frame(marco_principal, bg="#e6e6e6", bd=1)
-        self.marco_tabla.pack(fill="x")
-
-        marco_botones_tabla = tk.Frame(marco_principal, bg="#e6e6e6")
-        marco_botones_tabla.pack(fill="x", pady=(8, 10))
-
-        self.boton_agregar_fila = ttk.Button(
-            marco_botones_tabla, text="Agregar fila", command=self.agregar_fila
-        )
-        self.boton_agregar_fila.pack(side="left", padx=(0, 8))
-        self.boton_eliminar_fila = ttk.Button(
-            marco_botones_tabla, text="Eliminar fila", command=self.eliminar_fila
-        )
-        self.boton_eliminar_fila.pack(side="left", padx=(0, 14))
-
-        self.boton_agregar_columna = ttk.Button(
-            marco_botones_tabla,
-            text="Agregar columna",
-            command=self.agregar_columna,
-        )
-        self.boton_agregar_columna.pack(side="left", padx=(0, 8))
-        self.boton_eliminar_columna = ttk.Button(
-            marco_botones_tabla,
-            text="Eliminar columna",
-            command=self.eliminar_columna,
-        )
-        self.boton_eliminar_columna.pack(side="left")
-
-        self.boton_guardar = ttk.Button(
-            marco_botones_tabla, text="Guardar", command=self.guardar_cotizacion
-        )
-        self.boton_guardar.pack(side="right", padx=(8, 0))
-        self.boton_editar = ttk.Button(
-            marco_botones_tabla, text="Editar", command=self.editar_cotizacion
-        )
-        self.boton_editar.pack(side="right")
-        self.boton_imprimir = ttk.Button(
-            marco_botones_tabla, text="Imprimir", command=self.abrir_menu_impresion
-        )
-        self.boton_imprimir.pack(side="right", padx=(0, 8))
-
-        marco_totales = tk.Frame(marco_principal, bg="#e6e6e6")
-        marco_totales.pack(fill="x", pady=(6, 10))
-
-        self._crear_linea_total(marco_totales, "Neto:", self.var_neto)
-        self._crear_linea_total(marco_totales, "IVA:", self.var_iva)
-        self._crear_linea_total(marco_totales, "Total:", self.var_total)
-
-        tk.Label(
-            marco_principal,
-            text="Plazo de entrega: Inmediata",
-            font=("Arial", 10, "bold"),
-            bg="#e6e6e6",
-            anchor="w",
-        ).pack(fill="x")
-        tk.Label(
-            marco_principal,
-            text="Forma de pago: A convenir",
-            font=("Arial", 10, "bold"),
-            bg="#e6e6e6",
-            anchor="w",
-        ).pack(fill="x", pady=(0, 14))
-
-        tk.Label(
-            marco_principal,
-            text="Atentamente,",
-            font=("Arial", 10),
-            bg="#e6e6e6",
-            anchor="w",
-        ).pack(fill="x")
-
-        self.entrada_nombre_ejecutivo = tk.Entry(
-            marco_principal,
-            textvariable=self.var_nombre_ejecutivo,
-            font=("Arial", 12, "bold"),
-            relief="flat",
-            bg="#e6e6e6",
-            justify="left",
-        )
-        self.entrada_nombre_ejecutivo.pack(fill="x", pady=(8, 2))
-
-        self.entrada_cargo_ejecutivo = tk.Entry(
-            marco_principal,
-            textvariable=self.var_cargo_ejecutivo,
-            font=("Arial", 11),
-            relief="flat",
-            bg="#e6e6e6",
-            justify="left",
-        )
-        self.entrada_cargo_ejecutivo.pack(fill="x")
-
-    def _crear_encabezado_logo(self, padre: tk.Frame):
-        ruta_logo = Path(__file__).parent / "assets" / "logogermania.png"
-        marco_logo = tk.Frame(padre, bg="#e6e6e6")
-        marco_logo.pack(fill="x", pady=(0, 12))
-
-        if ruta_logo.exists():
-            self.logogermania = tk.PhotoImage(file=str(ruta_logo))
+        for texto in [
+            "EXTINTORES NUEVOS  |  RECARGA DE EXTINTORES",
+            "GABINETES RED HUMEDA MANTENCIÓN DE CARRETES",
+            "EMPRESA CERTIFICADA DECRETO 44",
+        ]:
             tk.Label(
-                marco_logo,
-                image=self.logogermania,
+                marco_izquierdo,
+                text=texto,
+                font=("Arial", 12 if "EMPRESA" not in texto else 16, "bold"),
+                fg="#b71818",
+                bg="#efefef",
+                anchor="w",
+            ).pack(fill="x", pady=(0, 5))
+            ttk.Separator(marco_izquierdo, orient="horizontal").pack(fill="x", pady=(0, 8))
+
+        marco_cotizacion = tk.Frame(marco_izquierdo, bg="#efefef")
+        marco_cotizacion.pack(fill="x", pady=(10, 0))
+
+        tk.Frame(marco_cotizacion, bg="#b71818", height=4).pack(side="left", fill="x", expand=True, padx=(0, 14))
+        tk.Label(
+            marco_cotizacion,
+            text="COTIZACIÓN",
+            font=("Arial", 30, "bold"),
+            fg="#b71818",
+            bg="#efefef",
+        ).pack(side="left")
+        tk.Frame(marco_cotizacion, bg="#b71818", height=4).pack(side="left", fill="x", expand=True, padx=(14, 0))
+
+        tk.Label(
+            marco_izquierdo,
+            textvariable=self.var_telefono,
+            font=("Arial", 22, "bold"),
+            fg="#b71818",
+            bg="#efefef",
+        ).pack(pady=(8, 0))
+
+    def _crear_bloque_logo_derecho(self, padre: tk.Frame):
+        marco_derecho = tk.Frame(padre, bg="#efefef")
+        marco_derecho.grid(row=0, column=1, sticky="nsew")
+
+        ruta_logo = Path(__file__).parent / "assets" / "logogermania.png"
+        if ruta_logo.exists():
+            self.logo_principal = tk.PhotoImage(file=str(ruta_logo))
+            tk.Label(
+                marco_derecho,
+                image=self.logo_principal,
                 bg="#ffffff",
                 bd=1,
                 relief="solid",
-                padx=8,
-                pady=6,
-            ).pack(anchor="center")
+            ).pack(fill="both", expand=True)
             return
 
-        # Si falta el archivo de imagen, se muestra un respaldo legible para no romper el diseño.
         tk.Label(
-            marco_logo,
+            marco_derecho,
             text="GERMANIA",
-            font=("Arial", 22, "bold"),
-            fg="#d11d1d",
-            bg="#e6e6e6",
-        ).pack(anchor="center")
+            font=("Arial", 24, "bold"),
+            fg="#b71818",
+            bg="#efefef",
+        ).pack(expand=True)
 
-    def _crear_linea_total(self, padre: tk.Frame, etiqueta: str, variable: tk.StringVar):
-        fila = tk.Frame(padre, bg="#e6e6e6")
-        fila.pack(anchor="w")
-        tk.Label(fila, text=etiqueta, font=("Arial", 11, "bold"), bg="#e6e6e6").pack(
-            side="left"
+    def _crear_bloque_destinatario(self):
+        marco_destinatario = tk.Frame(self.marco_principal, bg="#efefef")
+        marco_destinatario.pack(fill="x", pady=(20, 10))
+
+        tk.Label(
+            marco_destinatario,
+            text="SEÑORES,",
+            font=("Arial", 15, "bold"),
+            bg="#efefef",
+            anchor="w",
+        ).pack(fill="x")
+
+        self.entrada_senores = tk.Entry(
+            marco_destinatario,
+            textvariable=self.var_senores,
+            font=("Arial", 16, "bold"),
+            relief="flat",
+            bg="#efefef",
+            justify="left",
         )
-        tk.Label(fila, textvariable=variable, font=("Arial", 11), bg="#e6e6e6").pack(
-            side="left"
+        self.entrada_senores.pack(fill="x", pady=(8, 8))
+
+        marco_atencion = tk.Frame(marco_destinatario, bg="#efefef")
+        marco_atencion.pack(fill="x")
+
+        tk.Label(
+            marco_atencion,
+            text="ATT:",
+            font=("Arial", 14, "bold"),
+            bg="#efefef",
+        ).pack(side="left")
+
+        self.entrada_atencion = tk.Entry(
+            marco_atencion,
+            textvariable=self.var_atencion,
+            font=("Arial", 14, "bold"),
+            relief="flat",
+            bg="#efefef",
+            justify="left",
         )
+        self.entrada_atencion.pack(side="left", fill="x", expand=True, padx=(8, 0))
+
+        tk.Label(
+            marco_destinatario,
+            text="PRESENTE",
+            font=("Arial", 14),
+            bg="#efefef",
+            anchor="w",
+        ).pack(fill="x", pady=(8, 12))
+
+        tk.Label(
+            marco_destinatario,
+            text="Estimados señores, tenemos el agrado en cotizar lo siguiente:",
+            font=("Arial", 14, "bold"),
+            bg="#efefef",
+            anchor="w",
+        ).pack(fill="x")
+
+    def _crear_tabla_y_totales(self):
+        self.marco_tabla = tk.Frame(self.marco_principal, bg="#efefef")
+        self.marco_tabla.pack(fill="x", pady=(10, 0))
+
+        marco_totales = tk.Frame(self.marco_principal, bg="#efefef")
+        marco_totales.pack(fill="x")
+
+        self._crear_fila_total_resumen(marco_totales, "NETO", self.var_neto)
+        self._crear_fila_total_resumen(marco_totales, "IVA (19%)", self.var_iva)
+        self._crear_fila_total_resumen(marco_totales, "TOTAL", self.var_total, es_total=True)
+
+        marco_botones_tabla = tk.Frame(self.marco_principal, bg="#efefef")
+        marco_botones_tabla.pack(fill="x", pady=(14, 10))
+
+        self.boton_agregar_fila = ttk.Button(marco_botones_tabla, text="Agregar fila", command=self.agregar_fila)
+        self.boton_agregar_fila.pack(side="left", padx=(0, 8))
+
+        self.boton_eliminar_fila = ttk.Button(marco_botones_tabla, text="Eliminar fila", command=self.eliminar_fila)
+        self.boton_eliminar_fila.pack(side="left", padx=(0, 12))
+
+        self.boton_agregar_columna = ttk.Button(marco_botones_tabla, text="Agregar columna", command=self.agregar_columna)
+        self.boton_agregar_columna.pack(side="left", padx=(0, 8))
+
+        self.boton_eliminar_columna = ttk.Button(marco_botones_tabla, text="Eliminar columna", command=self.eliminar_columna)
+        self.boton_eliminar_columna.pack(side="left")
+
+        self.boton_guardar = ttk.Button(marco_botones_tabla, text="Guardar", command=self.guardar_cotizacion)
+        self.boton_guardar.pack(side="right", padx=(8, 0))
+
+        self.boton_editar = ttk.Button(marco_botones_tabla, text="Editar", command=self.editar_cotizacion)
+        self.boton_editar.pack(side="right")
+
+        self.boton_imprimir = ttk.Button(marco_botones_tabla, text="Imprimir", command=self.abrir_menu_impresion)
+        self.boton_imprimir.pack(side="right", padx=(0, 8))
+
+    def _crear_fila_total_resumen(
+        self,
+        padre: tk.Frame,
+        etiqueta: str,
+        variable: tk.StringVar,
+        es_total: bool = False,
+    ):
+        fila = tk.Frame(padre, bg="#efefef")
+        fila.pack(fill="x")
+
+        tk.Label(fila, text="", bg="#efefef").pack(side="left", fill="x", expand=True)
+
+        fondo = "#d31b1b" if es_total else "#efefef"
+        color_texto = "white" if es_total else "#111111"
+        ancho_etiqueta = 14
+
+        tk.Label(
+            fila,
+            text=etiqueta,
+            width=ancho_etiqueta,
+            anchor="e",
+            bg=fondo,
+            fg=color_texto,
+            font=("Arial", 13, "bold"),
+            padx=10,
+            pady=7,
+        ).pack(side="left")
+
+        tk.Label(
+            fila,
+            textvariable=variable,
+            width=14,
+            anchor="e",
+            bg=fondo,
+            fg=color_texto,
+            font=("Arial", 16, "bold"),
+            padx=12,
+            pady=7,
+        ).pack(side="left")
+
+    def _crear_bloque_pie(self):
+        marco_pie = tk.Frame(self.marco_principal, bg="#efefef")
+        marco_pie.pack(fill="x", pady=(12, 0))
+        marco_pie.grid_columnconfigure(0, weight=1)
+        marco_pie.grid_columnconfigure(1, weight=1)
+
+        marco_izquierdo = tk.Frame(marco_pie, bg="#efefef")
+        marco_izquierdo.grid(row=0, column=0, sticky="nw")
+
+        tk.Label(
+            marco_izquierdo,
+            text="PLAZO DE ENTREGA: INMEDIATA",
+            font=("Arial", 15, "bold"),
+            bg="#efefef",
+        ).pack(anchor="w")
+        tk.Label(
+            marco_izquierdo,
+            text="FORMA DE PAGO: A CONVENIR",
+            font=("Arial", 15, "bold"),
+            bg="#efefef",
+        ).pack(anchor="w", pady=(8, 12))
+
+        ruta_logo = Path(__file__).parent / "assets" / "logogermania.png"
+        if ruta_logo.exists():
+            self.logo_pie = tk.PhotoImage(file=str(ruta_logo))
+            tk.Label(marco_izquierdo, image=self.logo_pie, bg="#efefef").pack(anchor="w")
+
+        marco_derecho = tk.Frame(marco_pie, bg="#efefef")
+        marco_derecho.grid(row=0, column=1, sticky="ne")
+
+        tk.Label(
+            marco_derecho,
+            text="Se despide atentamente.",
+            font=("Arial", 11),
+            bg="#efefef",
+            anchor="w",
+        ).pack(fill="x", pady=(0, 8))
+
+        self.entrada_nombre_ejecutivo = tk.Entry(
+            marco_derecho,
+            textvariable=self.var_nombre_ejecutivo,
+            font=("Arial", 16, "bold"),
+            relief="flat",
+            bg="#efefef",
+            justify="left",
+        )
+        self.entrada_nombre_ejecutivo.pack(fill="x")
+
+        self.entrada_cargo_ejecutivo = tk.Entry(
+            marco_derecho,
+            textvariable=self.var_cargo_ejecutivo,
+            font=("Arial", 13),
+            relief="flat",
+            bg="#efefef",
+            justify="left",
+        )
+        self.entrada_cargo_ejecutivo.pack(fill="x", pady=(2, 12))
+
+        tk.Entry(
+            marco_derecho,
+            textvariable=self.var_telefono,
+            font=("Arial", 13, "bold"),
+            relief="flat",
+            bg="#efefef",
+            justify="left",
+        ).pack(fill="x", pady=(0, 6))
+
+        tk.Entry(
+            marco_derecho,
+            textvariable=self.var_correo,
+            font=("Arial", 13, "bold"),
+            relief="flat",
+            bg="#efefef",
+            justify="left",
+        ).pack(fill="x")
 
     def agregar_fila(self):
         if self.bloqueado:
@@ -250,11 +348,18 @@ class AplicacionCotizacion:
 
         nuevas_celdas = []
         for indice_columna, _ in enumerate(self.columnas):
-            entrada = tk.Entry(self.marco_tabla, font=("Arial", 10), relief="solid", bd=1)
+            entrada = tk.Entry(self.marco_tabla, font=("Arial", 15), relief="solid", bd=1)
             if indice_columna == 0:
                 entrada.insert(0, "1")
-            elif indice_columna in (2, 3):
+                entrada.configure(justify="center")
+            elif indice_columna == 2:
                 entrada.insert(0, "0")
+                entrada.configure(justify="right")
+            elif indice_columna == len(self.columnas) - 1:
+                entrada.insert(0, "$0")
+                entrada.configure(justify="right")
+            else:
+                entrada.configure(justify="left")
             entrada.bind("<KeyRelease>", self._actualizar_calculos_automaticos)
             nuevas_celdas.append(entrada)
 
@@ -265,7 +370,6 @@ class AplicacionCotizacion:
     def eliminar_fila(self):
         if self.bloqueado:
             return
-        # La fila base se conserva siempre para que la plantilla no quede vacía.
         if len(self.filas) <= 1:
             return
         fila = self.filas.pop()
@@ -277,11 +381,12 @@ class AplicacionCotizacion:
     def agregar_columna(self):
         if self.bloqueado:
             return
+
         nombre = f"Columna {len(self.columnas) - 3}" if len(self.columnas) > 3 else "Columna 1"
         self.columnas.insert(-1, nombre)
 
         for fila in self.filas:
-            entrada = tk.Entry(self.marco_tabla, font=("Arial", 10), relief="solid", bd=1)
+            entrada = tk.Entry(self.marco_tabla, font=("Arial", 15), relief="solid", bd=1)
             entrada.bind("<KeyRelease>", self._actualizar_calculos_automaticos)
             fila.insert(-1, entrada)
 
@@ -290,7 +395,6 @@ class AplicacionCotizacion:
     def eliminar_columna(self):
         if self.bloqueado:
             return
-        # Se mantiene un mínimo de las cuatro columnas base para respetar el formato.
         if len(self.columnas) <= 4:
             return
 
@@ -308,8 +412,6 @@ class AplicacionCotizacion:
         for widget in self.marco_tabla.grid_slaves():
             widget.grid_forget()
 
-        # Se limpia la configuración previa para evitar que columnas antiguas
-        # mantengan pesos o anchos que deformen el diseño al agregar/eliminar.
         for indice_columna in range(self.max_columnas_renderizadas + 2):
             self.marco_tabla.grid_columnconfigure(indice_columna, weight=0, minsize=0)
 
@@ -317,40 +419,43 @@ class AplicacionCotizacion:
         for indice_columna, titulo in enumerate(self.columnas):
             encabezado = tk.Entry(
                 self.marco_tabla,
-                font=("Arial", 10, "bold"),
+                font=("Arial", 14, "bold"),
                 relief="solid",
                 bd=1,
-                bg="#e31d1d",
+                bg="#d31b1b",
                 fg="white",
-                justify="left",
+                justify="center",
             )
-            encabezado.insert(0, titulo)
+            encabezado.insert(0, titulo.upper())
             encabezado.bind(
                 "<FocusOut>",
                 lambda evento, i=indice_columna: self._actualizar_nombre_columna(i, evento),
             )
             encabezado.configure(state="readonly" if self.bloqueado else "normal")
-            encabezado.grid(row=0, column=indice_columna, sticky="nsew")
+            encabezado.grid(row=0, column=indice_columna, sticky="nsew", ipady=7)
             self.entradas_encabezado.append(encabezado)
 
         for indice_fila, fila in enumerate(self.filas, start=1):
             for indice_columna, celda in enumerate(fila):
                 if indice_columna == len(self.columnas) - 1:
-                    celda.configure(state="readonly")
+                    celda.configure(state="readonly", fg="#a51818", font=("Arial", 16, "bold"))
                 else:
                     celda.configure(state="readonly" if self.bloqueado else "normal")
-                celda.grid(row=indice_fila, column=indice_columna, sticky="nsew")
+                    if indice_columna == 0:
+                        celda.configure(justify="center")
+                    elif indice_columna >= 2:
+                        celda.configure(justify="right")
+                celda.grid(row=indice_fila, column=indice_columna, sticky="nsew", ipady=10)
 
         for indice_columna in range(len(self.columnas)):
             ancho_columna = self._obtener_ancho_columna(indice_columna)
             self.marco_tabla.grid_columnconfigure(indice_columna, weight=0, minsize=ancho_columna)
 
-        # Columna de relleno para ocupar el espacio sobrante sin deformar la tabla.
         self.marco_tabla.grid_columnconfigure(len(self.columnas), weight=1, minsize=0)
         self.max_columnas_renderizadas = max(self.max_columnas_renderizadas, len(self.columnas))
 
     def _obtener_ancho_columna(self, indice_columna: int) -> int:
-        anchos_base = [190, 380, 190, 190]
+        anchos_base = [140, 420, 190, 190]
         if indice_columna < len(anchos_base):
             return anchos_base[indice_columna]
         return 170
@@ -367,7 +472,8 @@ class AplicacionCotizacion:
         self._aplicar_estado_edicion()
 
     def _aplicar_estado_edicion(self):
-        # Este método centraliza el bloqueo/desbloqueo de toda la interfaz editable.
+        # Este método concentra el estado editable de toda la pantalla para evitar
+        # inconsistencias entre los botones y los campos de datos al guardar/editar.
         estado_controles = "disabled" if self.bloqueado else "normal"
         self.boton_agregar_fila.configure(state=estado_controles)
         self.boton_eliminar_fila.configure(state=estado_controles)
@@ -377,12 +483,8 @@ class AplicacionCotizacion:
         self.boton_guardar.configure(state="disabled" if self.bloqueado else "normal")
         self.boton_editar.configure(state="normal" if self.bloqueado else "disabled")
 
-        self.entrada_nombre_ejecutivo.configure(
-            state="readonly" if self.bloqueado else "normal"
-        )
-        self.entrada_cargo_ejecutivo.configure(
-            state="readonly" if self.bloqueado else "normal"
-        )
+        self.entrada_nombre_ejecutivo.configure(state="readonly" if self.bloqueado else "normal")
+        self.entrada_cargo_ejecutivo.configure(state="readonly" if self.bloqueado else "normal")
         self.entrada_senores.configure(state="readonly" if self.bloqueado else "normal")
         self.entrada_atencion.configure(state="readonly" if self.bloqueado else "normal")
 
