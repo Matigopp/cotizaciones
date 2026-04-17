@@ -138,11 +138,9 @@ class AplicacionCotizacion:
                 bg="#ffffff",
             ).pack(pady=(28, 14))
 
-        ruta_extintor_png = Path(__file__).parent / "assets" / "extintor_germania.png"
-        ruta_extintor_ppm = Path(__file__).parent / "assets" / "extintor_germania.ppm"
-        if ruta_extintor_png.exists() or ruta_extintor_ppm.exists():
-            # Se usa subsample para mantener una proporción limpia sin dependencias adicionales.
-            ruta_extintor = ruta_extintor_png if ruta_extintor_png.exists() else ruta_extintor_ppm
+        ruta_extintor = Path(__file__).parent / "assets" / "PQS10KGDEFINITIVO.png"
+        if ruta_extintor.exists():
+            # Esta imagen se guarda dentro de assets para que funcione igual en cualquier PC.
             self.imagen_extintor = tk.PhotoImage(file=str(ruta_extintor)).subsample(2, 2)
             tk.Label(panel_marca, image=self.imagen_extintor, bg="#ffffff").pack(pady=(0, 20))
         else:
