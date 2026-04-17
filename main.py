@@ -43,9 +43,49 @@ class AplicacionCotizacion:
         self.imagen_extintor = None
         self.imagen_panel_derecho = None
 
+        self.estilos_botones = self._definir_estilos_botones()
+
         self._construir_interfaz()
         self.agregar_fila()
         self._aplicar_estado_edicion()
+
+    def _definir_estilos_botones(self) -> dict[str, dict[str, str | int]]:
+        return {
+            "principal": {
+                "bg": "#b71818",
+                "fg": "white",
+                "activebackground": "#8f1111",
+                "activeforeground": "white",
+            },
+            "secundario": {
+                "bg": "#d9d9d9",
+                "fg": "#111111",
+                "activebackground": "#c8c8c8",
+                "activeforeground": "#111111",
+            },
+        }
+
+    def _crear_boton_accion(
+        self,
+        padre: tk.Widget,
+        texto: str,
+        comando,
+        variante: str = "secundario",
+    ) -> tk.Button:
+        estilo = self.estilos_botones[variante]
+        return tk.Button(
+            padre,
+            text=texto,
+            command=comando,
+            font=("Arial", 11, "bold"),
+            relief="raised",
+            bd=1,
+            padx=14,
+            pady=8,
+            cursor="hand2",
+            highlightthickness=0,
+            **estilo,
+        )
 
     def _construir_interfaz(self):
         self.marco_principal = tk.Frame(self.raiz, bg=self.color_fondo, padx=28, pady=18)
@@ -309,25 +349,51 @@ class AplicacionCotizacion:
         marco_botones_tabla = tk.Frame(self.marco_principal, bg="#efefef")
         marco_botones_tabla.pack(fill="x", pady=(14, 10))
 
-        self.boton_agregar_fila = ttk.Button(marco_botones_tabla, text="Agregar fila", command=self.agregar_fila)
+        self.boton_agregar_fila = self._crear_boton_accion(
+            marco_botones_tabla,
+            texto="Agregar fila",
+            comando=self.agregar_fila,
+            variante="principal",
+        )
         self.boton_agregar_fila.pack(side="left", padx=(0, 8))
 
-        self.boton_eliminar_fila = ttk.Button(marco_botones_tabla, text="Eliminar fila", command=self.eliminar_fila)
+        self.boton_eliminar_fila = self._crear_boton_accion(
+            marco_botones_tabla,
+            texto="Eliminar fila",
+            comando=self.eliminar_fila,
+            variante="secundario",
+        )
         self.boton_eliminar_fila.pack(side="left", padx=(0, 12))
 
-        self.boton_guardar = ttk.Button(marco_botones_tabla, text="Guardar", command=self.guardar_cotizacion)
+        self.boton_guardar = self._crear_boton_accion(
+            marco_botones_tabla,
+            texto="Guardar",
+            comando=self.guardar_cotizacion,
+            variante="principal",
+        )
         self.boton_guardar.pack(side="right", padx=(8, 0))
 
-        self.boton_editar = ttk.Button(marco_botones_tabla, text="Editar", command=self.editar_cotizacion)
+        self.boton_editar = self._crear_boton_accion(
+            marco_botones_tabla,
+            texto="Editar",
+            comando=self.editar_cotizacion,
+            variante="secundario",
+        )
         self.boton_editar.pack(side="right")
 
-        self.boton_imprimir = ttk.Button(marco_botones_tabla, text="Imprimir", command=self.abrir_menu_impresion)
+        self.boton_imprimir = self._crear_boton_accion(
+            marco_botones_tabla,
+            texto="Imprimir",
+            comando=self.abrir_menu_impresion,
+            variante="principal",
+        )
         self.boton_imprimir.pack(side="right", padx=(0, 8))
 
-        self.boton_exportar_pdf = ttk.Button(
+        self.boton_exportar_pdf = self._crear_boton_accion(
             marco_botones_tabla,
-            text="Exportar PDF",
-            command=self.exportar_reporte_pdf,
+            texto="Guardar como archivo",
+            comando=self.exportar_reporte_pdf,
+            variante="principal",
         )
         self.boton_exportar_pdf.pack(side="right", padx=(0, 8))
 
@@ -601,19 +667,21 @@ class AplicacionCotizacion:
             anchor="w",
         ).pack(fill="x", pady=(0, 14))
 
-        boton_imprimir_menu = ttk.Button(
+        boton_imprimir_menu = self._crear_boton_accion(
             marco_lateral,
-            text="Imprimir",
-            command=self._imprimir_desde_menu,
+            texto="Imprimir",
+            comando=self._imprimir_desde_menu,
+            variante="principal",
         )
-        boton_imprimir_menu.pack(fill="x", ipady=8, pady=(0, 14))
+        boton_imprimir_menu.pack(fill="x", pady=(0, 14))
 
-        boton_pdf_menu = ttk.Button(
+        boton_pdf_menu = self._crear_boton_accion(
             marco_lateral,
-            text="Guardar en PDF",
-            command=self.exportar_reporte_pdf,
+            texto="Guardar como archivo",
+            comando=self.exportar_reporte_pdf,
+            variante="secundario",
         )
-        boton_pdf_menu.pack(fill="x", ipady=8, pady=(0, 14))
+        boton_pdf_menu.pack(fill="x", pady=(0, 14))
 
         tk.Label(
             marco_lateral,
