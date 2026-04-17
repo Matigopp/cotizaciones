@@ -369,7 +369,7 @@ class AplicacionCotizacion:
 
         self.boton_agregar_fila = self._crear_boton_accion(
             marco_botones_izquierda,
-            texto="Agregar fila",
+            texto="Añadir fila",
             comando=self.agregar_fila,
             variante="principal",
         )
@@ -377,7 +377,7 @@ class AplicacionCotizacion:
 
         self.boton_eliminar_fila = self._crear_boton_accion(
             marco_botones_izquierda,
-            texto="Eliminar fila",
+            texto="Quitar fila",
             comando=self.eliminar_fila,
             variante="secundario",
         )
@@ -401,7 +401,7 @@ class AplicacionCotizacion:
 
         self.boton_imprimir = self._crear_boton_accion(
             marco_botones_derecha,
-            texto="Imprimir",
+            texto="Imprimir documento",
             comando=self.abrir_menu_impresion,
             variante="principal",
         )
@@ -409,7 +409,7 @@ class AplicacionCotizacion:
 
         self.boton_exportar_pdf = self._crear_boton_accion(
             marco_botones_derecha,
-            texto="Guardar como archivo",
+            texto="Guardar documento como PDF",
             comando=self.exportar_reporte_pdf,
             variante="principal",
         )
@@ -527,23 +527,25 @@ class AplicacionCotizacion:
         )
         self.entrada_cargo_ejecutivo.pack(fill="x", pady=(2, 12))
 
-        tk.Entry(
+        self.entrada_telefono = tk.Entry(
             marco_derecho,
             textvariable=self.var_telefono,
             font=("Arial", 13, "bold"),
             relief="flat",
             bg="#efefef",
             justify="left",
-        ).pack(fill="x", pady=(0, 6))
+        )
+        self.entrada_telefono.pack(fill="x", pady=(0, 6))
 
-        tk.Entry(
+        self.entrada_correo = tk.Entry(
             marco_derecho,
             textvariable=self.var_correo,
             font=("Arial", 13, "bold"),
             relief="flat",
             bg="#efefef",
             justify="left",
-        ).pack(fill="x")
+        )
+        self.entrada_correo.pack(fill="x")
 
     def agregar_fila(self):
         if self.bloqueado:
@@ -641,6 +643,12 @@ class AplicacionCotizacion:
     def editar_cotizacion(self):
         self.bloqueado = False
         self._aplicar_estado_edicion()
+        # Este aviso confirma que se pueden volver a editar los datos
+        # principales del documento, incluyendo los del cliente.
+        messagebox.showinfo(
+            "Edición habilitada",
+            "Ahora puede editar el documento (nombres de cliente, atención, ejecutivo, etc.).",
+        )
 
     def _aplicar_estado_edicion(self):
         # Este método concentra el estado editable de toda la pantalla para evitar
@@ -654,6 +662,8 @@ class AplicacionCotizacion:
 
         self.entrada_nombre_ejecutivo.configure(state="readonly" if self.bloqueado else "normal")
         self.entrada_cargo_ejecutivo.configure(state="readonly" if self.bloqueado else "normal")
+        self.entrada_telefono.configure(state="readonly" if self.bloqueado else "normal")
+        self.entrada_correo.configure(state="readonly" if self.bloqueado else "normal")
         self.entrada_senores.configure(state="readonly" if self.bloqueado else "normal")
         self.entrada_atencion.configure(state="readonly" if self.bloqueado else "normal")
 
