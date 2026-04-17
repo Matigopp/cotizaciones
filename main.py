@@ -260,8 +260,44 @@ class AplicacionCotizacion:
         ).pack(fill="x")
 
     def _crear_tabla_y_totales(self):
-        self.marco_tabla = tk.Frame(self.marco_principal, bg="#efefef")
-        self.marco_tabla.pack(fill="x", pady=(10, 0))
+        # La tabla vive dentro de un canvas con scroll vertical para que los botones
+        # sigan visibles aunque el usuario agregue muchas filas.
+        self.marco_tabla_contenedor = tk.Frame(
+            self.marco_principal,
+            bg="#efefef",
+            highlightbackground="#d9d9d9",
+            highlightthickness=1,
+        )
+        self.marco_tabla_contenedor.pack(fill="x", pady=(10, 0))
+
+        self.canvas_tabla = tk.Canvas(
+            self.marco_tabla_contenedor,
+            bg="#efefef",
+            height=280,
+            highlightthickness=0,
+            bd=0,
+        )
+        self.scroll_tabla = ttk.Scrollbar(
+            self.marco_tabla_contenedor,
+            orient="vertical",
+            command=self.canvas_tabla.yview,
+        )
+        self.canvas_tabla.configure(yscrollcommand=self.scroll_tabla.set)
+
+        self.canvas_tabla.pack(side="left", fill="x", expand=True)
+        self.scroll_tabla.pack(side="right", fill="y")
+
+        self.marco_tabla = tk.Frame(self.canvas_tabla, bg="#efefef")
+        self.ventana_tabla = self.canvas_tabla.create_window(
+            (0, 0),
+            window=self.marco_tabla,
+            anchor="nw",
+        )
+
+        self.marco_tabla.bind("<Configure>", self._actualizar_area_scroll_tabla)
+        self.canvas_tabla.bind("<Configure>", self._ajustar_ancho_tabla_scroll)
+        self.canvas_tabla.bind("<Enter>", self._activar_scroll_tabla)
+        self.canvas_tabla.bind("<Leave>", self._desactivar_scroll_tabla)
 
         marco_totales = tk.Frame(self.marco_principal, bg="#efefef")
         marco_totales.pack(fill="x")
@@ -293,6 +329,23 @@ class AplicacionCotizacion:
 
         self.boton_imprimir = ttk.Button(marco_botones_tabla, text="Imprimir", command=self.abrir_menu_impresion)
         self.boton_imprimir.pack(side="right", padx=(0, 8))
+
+    def _actualizar_area_scroll_tabla(self, _evento=None):
+        self.canvas_tabla.configure(scrollregion=self.canvas_tabla.bbox("all"))
+
+    def _ajustar_ancho_tabla_scroll(self, evento):
+        # Se iguala el ancho del frame interno con el del canvas para que la tabla
+        # no quede comprimida cuando aparezca la barra de desplazamiento.
+        self.canvas_tabla.itemconfigure(self.ventana_tabla, width=evento.width)
+
+    def _activar_scroll_tabla(self, _evento=None):
+        self.canvas_tabla.bind_all("<MouseWheel>", self._desplazar_tabla_rueda_mouse)
+
+    def _desactivar_scroll_tabla(self, _evento=None):
+        self.canvas_tabla.unbind_all("<MouseWheel>")
+
+    def _desplazar_tabla_rueda_mouse(self, evento):
+        self.canvas_tabla.yview_scroll(int(-1 * (evento.delta / 120)), "units")
 
     def _crear_fila_total_resumen(
         self,
