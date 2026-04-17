@@ -169,15 +169,15 @@ class AplicacionCotizacion:
         self.entrada_cargo_ejecutivo.pack(fill="x")
 
     def _crear_encabezado_logo(self, padre: tk.Frame):
-        ruta_logo = Path(__file__).parent / "assets" / "logo_germania.png"
+        ruta_logo = Path(__file__).parent / "assets" / "logogermania.png"
         marco_logo = tk.Frame(padre, bg="#e6e6e6")
         marco_logo.pack(fill="x", pady=(0, 12))
 
         if ruta_logo.exists():
-            self.logo_germania = tk.PhotoImage(file=str(ruta_logo))
+            self.logogermania = tk.PhotoImage(file=str(ruta_logo))
             tk.Label(
                 marco_logo,
-                image=self.logo_germania,
+                image=self.logogermania,
                 bg="#ffffff",
                 bd=1,
                 relief="solid",
