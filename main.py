@@ -181,9 +181,9 @@ class AplicacionCotizacion:
 
         ruta_logo = Path(__file__).parent / "assets" / "logogermania.png"
         if ruta_logo.exists():
-            # El logo se reduce para dejar espacio suficiente al extintor dentro del mismo panel.
-            self.logo_principal = tk.PhotoImage(file=str(ruta_logo)).subsample(2, 2)
-            tk.Label(panel_marca, image=self.logo_principal, bg=self.color_fondo).pack(pady=(28, 14))
+            imagen_logo = tk.PhotoImage(file=str(ruta_logo))
+            self.logo_principal = imagen_logo.zoom(3, 2).subsample(2, 2)
+            tk.Label(panel_marca, image=self.logo_principal, bg=self.color_fondo).pack(pady=(20, 10))
         else:
             tk.Label(
                 panel_marca,
@@ -199,7 +199,7 @@ class AplicacionCotizacion:
             ancho_maximo_panel = 330
             alto_maximo_panel = 390
             alto_logo = self.logo_principal.height() if self.logo_principal else 0
-            alto_disponible_extintor = max(1, alto_maximo_panel - alto_logo - 58)
+            alto_disponible_extintor = max(1, alto_maximo_panel - alto_logo - 44)
 
             # Se calcula la escala mínima necesaria para evitar que el extintor se recorte.
             factor_escala_extintor = max(
