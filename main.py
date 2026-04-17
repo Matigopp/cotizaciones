@@ -1,6 +1,12 @@
 import tkinter as tk
 from tkinter import ttk
 from pathlib import Path
+from tkinter import messagebox
+from tkinter import simpledialog
+import os
+import subprocess
+import sys
+import tempfile
 
 class AplicacionCotizacion:
     def __init__(self, raiz: tk.Tk):
@@ -19,7 +25,8 @@ class AplicacionCotizacion:
 
         self.var_nombre_ejecutivo = tk.StringVar(value="Emma Oliveros")
         self.var_cargo_ejecutivo = tk.StringVar(value="Ejecutiva de Ventas")
-
+        self.var_senores = tk.StringVar(value="Comunidad Rivas Vicuña 1214, Quinta Normal")
+        self.var_atencion = tk.StringVar(value="Sr. Roberto Armijo")
         self._construir_interfaz()
         self.agregar_fila()
         self._aplicar_estado_edicion()
@@ -53,20 +60,42 @@ class AplicacionCotizacion:
             anchor="w",
         ).pack(fill="x", pady=(0, 10))
 
+        marco_contacto_cliente = tk.Frame(marco_principal, bg="#e6e6e6")
+        marco_contacto_cliente.pack(fill="x", pady=(0, 12))
+
         tk.Label(
-            marco_principal,
-            text="Señores: Comunidad Rivas Vicuña 1214, Quinta Normal",
+            marco_contacto_cliente,
+            text="Señores:",
             font=("Arial", 10),
             bg="#e6e6e6",
             anchor="w",
-        ).pack(fill="x")
+        ).grid(row=0, column=0, sticky="w")
+
+        self.entrada_senores = tk.Entry(
+            marco_contacto_cliente,
+            textvariable=self.var_senores,
+            font=("Arial", 10),
+            relief="flat",
+            bg="#e6e6e6",
+        )
+        self.entrada_senores.grid(row=0, column=1, sticky="ew", padx=(6, 0))
         tk.Label(
-            marco_principal,
-            text="Atención: Sr. Roberto Armijo",
+            marco_contacto_cliente,
+            text="Atención:",
             font=("Arial", 10),
             bg="#e6e6e6",
             anchor="w",
-        ).pack(fill="x", pady=(0, 12))
+        ).grid(row=1, column=0, sticky="w", pady=(4, 0))
+
+        self.entrada_atencion = tk.Entry(
+            marco_contacto_cliente,
+            textvariable=self.var_atencion,
+            font=("Arial", 10),
+            relief="flat",
+            bg="#e6e6e6",
+        )
+        self.entrada_atencion.grid(row=1, column=1, sticky="ew", padx=(6, 0), pady=(4, 0))
+        marco_contacto_cliente.grid_columnconfigure(1, weight=1)
 
         tk.Label(
             marco_principal,
@@ -117,6 +146,10 @@ class AplicacionCotizacion:
             marco_botones_tabla, text="Editar", command=self.editar_cotizacion
         )
         self.boton_editar.pack(side="right")
+        self.boton_imprimir = ttk.Button(
+            marco_botones_tabla, text="Imprimir", command=self.imprimir_cotizacion
+        )
+        self.boton_imprimir.pack(side="right", padx=(0, 8))
 
         marco_totales = tk.Frame(marco_principal, bg="#e6e6e6")
         marco_totales.pack(fill="x", pady=(6, 10))
@@ -327,8 +360,55 @@ class AplicacionCotizacion:
         self.entrada_cargo_ejecutivo.configure(
             state="readonly" if self.bloqueado else "normal"
         )
+        self.entrada_senores.configure(state="readonly" if self.bloqueado else "normal")
+        self.entrada_atencion.configure(state="readonly" if self.bloqueado else "normal")
 
         self._renderizar_tabla()
+
+    def imprimir_cotizacion(self):
+        copias = simpledialog.askinteger(
+            "Imprimir",
+            "¿Cuántas copias desea imprimir?",
+            parent=self.raiz,
+            minvalue=1,
+            initialvalue=1,
+        )
+        if copias is None:
+            return
+
+        try:
+            ruta_temporal = self._generar_archivo_impresion()
+            self._enviar_a_impresora(ruta_temporal, copias)
+            messagebox.showinfo("Impresión", "Se envió el documento a impresión.")
+        except Exception as error:
+            messagebox.showerror("Error de impresión", f"No se pudo imprimir: {error}")
+
+    def _generar_archivo_impresion(self) -> str:
+        # Se crea un archivo temporal PostScript con el contenido visible de la ventana.
+        archivo = tempfile.NamedTemporaryFile(delete=False, suffix=".ps")
+        archivo.close()
+        self.raiz.update_idletasks()
+        self.raiz.postscript(file=archivo.name, colormode="color")
+        return archivo.name
+
+    def _enviar_a_impresora(self, ruta_archivo: str, copias: int):
+        if sys.platform.startswith("win"):
+            # En Windows se envía una impresión por cada copia solicitada.
+            for _ in range(copias):
+                os.startfile(ruta_archivo, "print")
+            return
+
+        comando = ["lpr", "-#", str(copias), ruta_archivo]
+        proceso = subprocess.run(
+            comando,
+            check=False,
+            capture_output=True,
+            text=True,
+        )
+        if proceso.returncode != 0:
+            mensaje_error = proceso.stderr.strip() or "No fue posible invocar el comando de impresión."
+            raise RuntimeError(mensaje_error)
+
 
     def _actualizar_calculos_automaticos(self, *_):
         total_neto = 0
