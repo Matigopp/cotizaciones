@@ -113,7 +113,7 @@ class AplicacionCotizacion:
             anchor="w",
         ).pack(fill="x", pady=(0, 8))
 
-        self.marco_tabla = tk.Frame(marco_principal, bg="#2b2b2b", bd=1)
+        self.marco_tabla = tk.Frame(marco_principal, bg="#e6e6e6", bd=1)
         self.marco_tabla.pack(fill="x")
 
         marco_botones_tabla = tk.Frame(marco_principal, bg="#e6e6e6")
