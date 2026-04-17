@@ -37,6 +37,7 @@ class AplicacionCotizacion:
 
         self.menu_impresion = None
         self.logo_principal = None
+        self.imagen_extintor = None
         self.logo_pie = None
 
         self._construir_interfaz()
@@ -113,25 +114,45 @@ class AplicacionCotizacion:
         marco_derecho = tk.Frame(padre, bg="#efefef")
         marco_derecho.grid(row=0, column=1, sticky="nsew")
 
+        panel_marca = tk.Frame(
+            marco_derecho,
+            bg="#ffffff",
+            bd=1,
+            relief="solid",
+            width=330,
+            height=360,
+        )
+        panel_marca.pack(fill="both", expand=True)
+        panel_marca.pack_propagate(False)
+
         ruta_logo = Path(__file__).parent / "assets" / "logogermania.png"
         if ruta_logo.exists():
-            self.logo_principal = tk.PhotoImage(file=str(ruta_logo))
+            self.logo_principal = tk.PhotoImage(file=str(ruta_logo)).subsample(2, 2)
+            tk.Label(panel_marca, image=self.logo_principal, bg="#ffffff").pack(pady=(28, 14))
+        else:
             tk.Label(
-                marco_derecho,
-                image=self.logo_principal,
+                panel_marca,
+                text="GERMANIA",
+                font=("Arial", 24, "bold"),
+                fg="#b71818",
                 bg="#ffffff",
-                bd=1,
-                relief="solid",
-            ).pack(fill="both", expand=True)
-            return
+            ).pack(pady=(28, 14))
 
-        tk.Label(
-            marco_derecho,
-            text="GERMANIA",
-            font=("Arial", 24, "bold"),
-            fg="#b71818",
-            bg="#efefef",
-        ).pack(expand=True)
+        ruta_extintor_png = Path(__file__).parent / "assets" / "extintor_germania.png"
+        ruta_extintor_ppm = Path(__file__).parent / "assets" / "extintor_germania.ppm"
+        if ruta_extintor_png.exists() or ruta_extintor_ppm.exists():
+            # Se usa subsample para mantener una proporción limpia sin dependencias adicionales.
+            ruta_extintor = ruta_extintor_png if ruta_extintor_png.exists() else ruta_extintor_ppm
+            self.imagen_extintor = tk.PhotoImage(file=str(ruta_extintor)).subsample(2, 2)
+            tk.Label(panel_marca, image=self.imagen_extintor, bg="#ffffff").pack(pady=(0, 20))
+        else:
+            tk.Label(
+                panel_marca,
+                text="Imagen extintor no disponible",
+                font=("Arial", 11),
+                fg="#666666",
+                bg="#ffffff",
+            ).pack(pady=(0, 20))
 
     def _crear_bloque_destinatario(self):
         marco_destinatario = tk.Frame(self.marco_principal, bg="#efefef")
